@@ -1,0 +1,272 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<title>Vibe Coding 檔案匯整</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f6f9;
+text-align:center;
+padding:40px;
+}
+
+.container{
+background:white;
+padding:30px;
+border-radius:10px;
+width:700px;
+margin:auto;
+box-shadow:0 4px 15px rgba(0,0,0,0.1);
+}
+
+h1{
+color:#333;
+}
+
+button{
+padding:10px 20px;
+border:none;
+background:#2f80ed;
+color:white;
+border-radius:5px;
+font-size:16px;
+cursor:pointer;
+}
+
+select{
+padding:6px;
+margin:10px;
+}
+
+table{
+border-collapse:collapse;
+margin:auto;
+margin-top:20px;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:6px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Vibe Coding 檔案匯整</h1>
+
+<p>選擇多個 Excel 檔案</p>
+
+<input type="file" id="fileInput" multiple accept=".xlsx,.xls">
+
+<br><br>
+
+<button onclick="mergeFiles()">合併檔案</button>
+
+<h3>合併結果 (前5筆)</h3>
+
+<div id="preview"></div>
+
+<hr>
+
+<h3>資料分析</h3>
+
+X軸欄位：
+<select id="xColumn"></select>
+
+Y軸統計欄位：
+<select id="yColumn"></select>
+
+<br>
+
+<button onclick="generateChart()">產生折線圖</button>
+
+<br><br>
+
+<canvas id="chart" width="600" height="300"></canvas>
+
+<br>
+
+<button onclick="downloadFile()">下載合併檔案</button>
+
+</div>
+
+<script>
+
+let mergedData=[]
+
+function mergeFiles(){
+
+const files=document.getElementById('fileInput').files
+
+mergedData=[]
+
+let processed=0
+
+for(let file of files){
+
+const reader=new FileReader()
+
+reader.onload=function(e){
+
+const data=new Uint8Array(e.target.result)
+
+const workbook=XLSX.read(data,{type:'array'})
+
+const sheet=workbook.Sheets[workbook.SheetNames[0]]
+
+const json=XLSX.utils.sheet_to_json(sheet)
+
+mergedData=mergedData.concat(json)
+
+processed++
+
+if(processed===files.length){
+
+showPreview()
+
+populateColumns()
+
+}
+
+}
+
+reader.readAsArrayBuffer(file)
+
+}
+
+}
+
+function showPreview(){
+
+let html="<table>"
+
+let keys=Object.keys(mergedData[0])
+
+html+="<tr>"
+
+for(let k of keys){
+
+html+="<th>"+k+"</th>"
+
+}
+
+html+="</tr>"
+
+for(let i=0;i<Math.min(5,mergedData.length);i++){
+
+html+="<tr>"
+
+for(let k of keys){
+
+html+="<td>"+mergedData[i][k]+"</td>"
+
+}
+
+html+="</tr>"
+
+}
+
+html+="</table>"
+
+document.getElementById("preview").innerHTML=html
+
+}
+
+function populateColumns(){
+
+let keys=Object.keys(mergedData[0])
+
+let xSelect=document.getElementById("xColumn")
+
+let ySelect=document.getElementById("yColumn")
+
+xSelect.innerHTML=""
+
+ySelect.innerHTML=""
+
+for(let k of keys){
+
+xSelect.innerHTML+=`<option value="${k}">${k}</option>`
+
+ySelect.innerHTML+=`<option value="${k}">${k}</option>`
+
+}
+
+}
+
+function generateChart(){
+
+let xCol=document.getElementById("xColumn").value
+
+let yCol=document.getElementById("yColumn").value
+
+let result={}
+
+for(let row of mergedData){
+
+let x=row[xCol]
+
+let y=parseFloat(row[yCol])||0
+
+if(!result[x]){
+
+result[x]=0
+
+}
+
+result[x]+=y
+
+}
+
+let labels=Object.keys(result)
+
+let values=Object.values(result)
+
+const ctx=document.getElementById('chart')
+
+new Chart(ctx,{
+
+type:'line',
+
+data:{
+labels:labels,
+datasets:[{
+label:yCol,
+data:values,
+borderWidth:2
+}]
+}
+
+})
+
+}
+
+function downloadFile(){
+
+const ws=XLSX.utils.json_to_sheet(mergedData)
+
+const wb=XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(wb,ws,"Merged")
+
+XLSX.writeFile(wb,"merged_result.xlsx")
+
+}
+
+</script>
+
+</body>
+</html>
