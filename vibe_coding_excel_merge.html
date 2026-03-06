@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Vibe Coding 檔案匯整</title>
+
+<style>
+
+body{
+font-family: Arial;
+background:#f5f6fa;
+text-align:center;
+padding:40px;
+}
+
+h1{
+color:#2f3640;
+}
+
+.container{
+background:white;
+padding:30px;
+border-radius:10px;
+width:600px;
+margin:auto;
+box-shadow:0 5px 20px rgba(0,0,0,0.1);
+}
+
+button{
+padding:10px 20px;
+border:none;
+background:#4078c0;
+color:white;
+font-size:16px;
+border-radius:6px;
+cursor:pointer;
+}
+
+table{
+border-collapse:collapse;
+margin-top:20px;
+width:100%;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:8px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>Vibe Coding 檔案匯整</h1>
+
+<p>請選擇多個 Excel 檔案</p>
+
+<input type="file" id="fileInput" multiple accept=".xlsx,.xls">
+
+<br><br>
+
+<button onclick="mergeFiles()">合併檔案</button>
+
+<h3>合併結果 (前5筆)</h3>
+
+<div id="preview"></div>
+
+<br>
+
+<button onclick="downloadFile()">下載合併檔案</button>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<script>
+
+let mergedData = [];
+
+function mergeFiles(){
+
+const files = document.getElementById('fileInput').files;
+
+mergedData = [];
+
+let fileCount = files.length;
+
+let processed = 0;
+
+for(let file of files){
+
+const reader = new FileReader();
+
+reader.onload = function(e){
+
+const data = new Uint8Array(e.target.result);
+
+const workbook = XLSX.read(data,{type:'array'});
+
+const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+const json = XLSX.utils.sheet_to_json(sheet);
+
+mergedData = mergedData.concat(json);
+
+processed++;
+
+if(processed===fileCount){
+
+showPreview();
+
+}
+
+};
+
+reader.readAsArrayBuffer(file);
+
+}
+
+}
+
+function showPreview(){
+
+let html="<table>";
+
+let keys = Object.keys(mergedData[0]);
+
+html+="<tr>";
+
+for(let k of keys){
+
+html+="<th>"+k+"</th>";
+
+}
+
+html+="</tr>";
+
+for(let i=0;i<Math.min(5,mergedData.length);i++){
+
+html+="<tr>";
+
+for(let k of keys){
+
+html+="<td>"+mergedData[i][k]+"</td>";
+
+}
+
+html+="</tr>";
+
+}
+
+html+="</table>";
+
+document.getElementById("preview").innerHTML = html;
+
+}
+
+function downloadFile(){
+
+const ws = XLSX.utils.json_to_sheet(mergedData);
+
+const wb = XLSX.utils.book_new();
+
+XLSX.utils.book_append_sheet(wb,ws,"Merged");
+
+XLSX.writeFile(wb,"merged_result.xlsx");
+
+}
+
+</script>
+
+</body>
+</html>
